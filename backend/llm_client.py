@@ -29,7 +29,7 @@ load_dotenv()
 
 API_KEY = os.getenv("GROQ_API_KEY", "")
 MOCK_MODE = os.getenv("MOCK_MODE", "").lower() == "true" or not API_KEY
-MODEL_NAME = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+MODEL_NAME = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
 _client = None
 if not MOCK_MODE:
