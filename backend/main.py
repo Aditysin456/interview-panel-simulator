@@ -11,8 +11,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import agents
-import os
 
 app = FastAPI(title="Multi-Agent Interview Panel Simulator")
 
