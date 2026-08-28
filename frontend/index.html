@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Agent AI Interview Panel Simulator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <h1>Multi-Agent AI Interview Panel Simulator</h1>
+    <p class="subtitle">Technical Agent · HR/Culture Agent · Hiring Manager Agent · Skeptic Agent</p>
+  </header>
+
+  <main>
+    <section id="input-section" class="card">
+      <h2>1. Candidate Materials</h2>
+      <label for="resume">Resume text</label>
+      <textarea id="resume" rows="6" placeholder="Paste the candidate's resume text here..."></textarea>
+
+      <label for="transcript">Interview transcript text</label>
+      <textarea id="transcript" rows="8" placeholder="Paste the interview transcript text here..."></textarea>
+
+      <button id="run-btn">Run Interview Panel</button>
+      <button id="sample-btn" class="secondary">Load Sample Data</button>
+      <p id="status-msg"></p>
+    </section>
+
+    <section id="results" class="hidden">
+
+      <section class="card">
+        <h2>2. Candidate Profile</h2>
+        <div id="profile-output"></div>
+      </section>
+
+      <section class="card">
+        <h2>3. Independent Agent Opinions</h2>
+        <p class="hint">Each agent below evaluated the candidate completely independently — none of them could see the others' opinions at this stage.</p>
+        <div id="opinions-output" class="agent-grid"></div>
+      </section>
+
+      <section class="card">
+        <h2>4. Debate</h2>
+        <p class="hint">Agents now react to each other's points directly.</p>
+        <div id="debate-output"></div>
+      </section>
+
+      <section class="card highlight">
+        <h2>5. Final Decision</h2>
+        <div id="final-output"></div>
+      </section>
+
+    </section>
+  </main>
+
+  <footer>
+    <p>Backend: <span id="backend-url">http://localhost:8000</span></p>
+  </footer>
+
+<script src="app.js"></script>
+</body>
+</html>
