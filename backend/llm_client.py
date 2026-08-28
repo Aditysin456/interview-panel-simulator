@@ -62,7 +62,7 @@ def call_llm(system: str, user: str, max_tokens: int = 1200) -> str:
             error_text = str(e)
             is_rate_limit = "429" in error_text or "rate_limit" in error_text.lower()
             if is_rate_limit and attempt < MAX_RETRIES - 1:
-                wait_seconds = 5 * (attempt + 1) + random.uniform(0, 2)
+                wait_seconds = 2 * (attempt + 1) + random.uniform(0, 1)
                 time.sleep(wait_seconds)
                 continue
             raise last_error
