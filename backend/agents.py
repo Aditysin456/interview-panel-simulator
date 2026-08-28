@@ -48,7 +48,7 @@ def build_profile(resume_text: str, transcript_text: str) -> dict:
         f"TRANSCRIPT:\n{transcript_text}\n\n"
         "Extract the structured candidate profile now."
     )
-    raw = call_llm(system=PROFILE_BUILDER_PROMPT, user=user_message, max_tokens=2500)
+    raw = call_llm(system=PROFILE_BUILDER_PROMPT, user=user_message, max_tokens=800)
     return _safe_json(raw, fallback={
         "skills": [], "experience": [], "claims": [], "transcript_excerpts": []
     })
@@ -144,7 +144,7 @@ def run_independent_agent(agent_key: str, profile: dict) -> dict:
         "confidence": 0, "evidence": []
     }
     for extra_attempt in range(3):
-        raw = call_llm(system=system_prompt, user=user_message, max_tokens=1800)
+        raw = call_llm(system=system_prompt, user=user_message, max_tokens=600)
         result = _safe_json(raw, fallback=None)
         if result is not None and result.get("opinion") not in (None, "", "Could not generate opinion."):
             return result
@@ -204,7 +204,7 @@ def run_debate(opinions: dict) -> dict:
         f"{json.dumps(opinions, indent=2)}\n\n"
         "Simulate the debate now, following all rules exactly."
     )
-    raw = call_llm(system=DEBATE_PROMPT, user=user_message, max_tokens=2000)
+    raw = call_llm(system=DEBATE_PROMPT, user=user_message, max_tokens=700)
     return _safe_json(raw, fallback={"exchanges": [], "unresolved_conflicts": []})
 
 
@@ -249,7 +249,7 @@ def run_final_decision(profile: dict, opinions: dict, debate: dict) -> dict:
         f"{json.dumps(debate, indent=2)}\n\n"
         "Produce the final decision now, following all rules exactly."
     )
-    raw = call_llm(system=FINAL_DECISION_PROMPT, user=user_message, max_tokens=2000)
+    raw = call_llm(system=FINAL_DECISION_PROMPT, user=user_message, max_tokens=700)
     return _safe_json(raw, fallback={
         "recommendation": "Undetermined", "confidence": 0, "reasoning": "",
         "strengths": [], "concerns": [], "unresolved_disagreements": []
