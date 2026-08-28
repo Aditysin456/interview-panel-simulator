@@ -8,9 +8,11 @@ Run with:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import agents
+import os
 
 app = FastAPI(title="Multi-Agent Interview Panel Simulator")
 
@@ -29,7 +31,7 @@ class PanelRequest(BaseModel):
     transcript_text: str
 
 
-@app.get("/")
+@app.get("/api/health")
 def health_check():
     return {"status": "ok", "message": "Interview Panel Simulator backend is running."}
 
@@ -71,3 +73,10 @@ def run_panel(req: PanelRequest):
         "debate": debate,
         "final_decision": final_decision,
     }
+
+# Serve the frontend (index.html, app.js, style.css) as static files.
+# This lets one container serve both the API and the UI, which is
+# simpler to deploy on Cloud Run than running two separate services.
+_frontend_dir = os.path.join(os.path.dirname(__file__), "..", "frontend")
+if os.path.isdir(_frontend_dir):
+    app.mount("/", StaticFiles(directory=_frontend_dir, html=True), name="frontend")

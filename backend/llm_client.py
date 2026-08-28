@@ -1,49 +1,73 @@
 """
 llm_client.py
-Single place that talks to the Anthropic API.
+Single place that talks to the Groq API.
 
 MOCK MODE:
-If no ANTHROPIC_API_KEY is set (or MOCK_MODE=true in .env), this returns
+If no GROQ_API_KEY is set (or MOCK_MODE=true in .env), this returns
 realistic fake responses instead of calling the real API. This lets you
 run and test the ENTIRE pipeline (profile -> 4 agents -> debate -> final
 decision) for free, before you plug in a real API key.
 
 To use the real API: put your key in backend/.env as
-ANTHROPIC_API_KEY=sk-ant-xxxxx
+GROQ_API_KEY=gsk_xxxxx
+
+RATE LIMIT HANDLING:
+Groq's free tier has a tokens-per-minute (TPM) limit. Since the 4
+independent agents now run in parallel, they can briefly exceed that
+limit if fired at the exact same moment. If Groq responds with a 429
+(rate limit) error, this file automatically waits and retries a few
+times before giving up, instead of crashing the whole request.
 """
 
 import os
 import random
+import time
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+API_KEY = os.getenv("GROQ_API_KEY", "")
 MOCK_MODE = os.getenv("MOCK_MODE", "").lower() == "true" or not API_KEY
-MODEL_NAME = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+MODEL_NAME = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
 _client = None
 if not MOCK_MODE:
-    from anthropic import Anthropic
-    _client = Anthropic(api_key=API_KEY)
+    from groq import Groq
+    _client = Groq(api_key=API_KEY)
+
+MAX_RETRIES = 4
 
 
 def call_llm(system: str, user: str, max_tokens: int = 1200) -> str:
-    """Makes one isolated call to the model. Returns raw text response."""
+    """Makes one isolated call to the model. Returns raw text response.
+    Automatically retries with a short wait if Groq's rate limit is hit."""
     if MOCK_MODE:
         return _mock_response(system, user)
 
-    response = _client.messages.create(
-        model=MODEL_NAME,
-        max_tokens=max_tokens,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
-    # Concatenate all text blocks in case of multi-block responses
-    return "".join(
-        block.text for block in response.content if block.type == "text"
-    )
+    last_error = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = _client.chat.completions.create(
+                model=MODEL_NAME,
+                max_tokens=max_tokens,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            last_error = e
+            error_text = str(e)
+            is_rate_limit = "429" in error_text or "rate_limit" in error_text.lower()
+            if is_rate_limit and attempt < MAX_RETRIES - 1:
+                wait_seconds = 5 * (attempt + 1) + random.uniform(0, 2)
+                time.sleep(wait_seconds)
+                continue
+            raise last_error
+
+    raise last_error
 
 
 # ---------------------------------------------------------------------

@@ -1,6 +1,6 @@
 // app.js — connects the UI to the FastAPI backend and renders each stage.
 
-const BACKEND_URL = "http://localhost:8000";
+const BACKEND_URL = window.location.origin;
 document.getElementById("backend-url").textContent = BACKEND_URL;
 
 const runBtn = document.getElementById("run-btn");

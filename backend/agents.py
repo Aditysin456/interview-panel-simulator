@@ -10,6 +10,7 @@ own function with its own isolated API call.
 """
 
 import json
+
 from llm_client import call_llm
 
 # ---------------------------------------------------------------------
@@ -47,7 +48,7 @@ def build_profile(resume_text: str, transcript_text: str) -> dict:
         f"TRANSCRIPT:\n{transcript_text}\n\n"
         "Extract the structured candidate profile now."
     )
-    raw = call_llm(system=PROFILE_BUILDER_PROMPT, user=user_message)
+    raw = call_llm(system=PROFILE_BUILDER_PROMPT, user=user_message, max_tokens=2500)
     return _safe_json(raw, fallback={
         "skills": [], "experience": [], "claims": [], "transcript_excerpts": []
     })
@@ -126,6 +127,11 @@ def run_independent_agent(agent_key: str, profile: dict) -> dict:
     Calls ONE agent in isolation. This function must never be given
     other agents' opinions — that is what makes Step 1 genuinely
     independent, per the challenge rule.
+
+    Includes an internal safety-net retry: if the call comes back empty
+    or fails to parse (e.g. a transient rate-limit blip), it retries up
+    to 2 extra times before falling back, since this has been observed
+    to happen intermittently to a random single agent.
     """
     system_prompt = AGENT_PROMPTS[agent_key]
     user_message = (
@@ -133,15 +139,23 @@ def run_independent_agent(agent_key: str, profile: dict) -> dict:
         f"{json.dumps(profile, indent=2)}\n\n"
         "Give your independent opinion now, in the required JSON format."
     )
-    raw = call_llm(system=system_prompt, user=user_message)
-    return _safe_json(raw, fallback={
+    fallback = {
         "agent": agent_key, "opinion": "Could not generate opinion.",
         "confidence": 0, "evidence": []
-    })
+    }
+    for extra_attempt in range(3):
+        raw = call_llm(system=system_prompt, user=user_message, max_tokens=1800)
+        result = _safe_json(raw, fallback=None)
+        if result is not None and result.get("opinion") not in (None, "", "Could not generate opinion."):
+            return result
+    return fallback
 
 
 def run_all_independent_agents(profile: dict) -> dict:
-    """Runs all 4 agents, each in its own isolated call."""
+    """Runs all 4 agents SEQUENTIALLY, each in its own isolated call.
+    Sequential is safer on Groq free tier (avoids rate-limit 429s).
+    Each agent still only ever sees the shared profile, never the
+    other agents' opinions — isolation is preserved."""
     results = {}
     for key in AGENT_PROMPTS:
         results[key] = run_independent_agent(key, profile)
@@ -190,7 +204,7 @@ def run_debate(opinions: dict) -> dict:
         f"{json.dumps(opinions, indent=2)}\n\n"
         "Simulate the debate now, following all rules exactly."
     )
-    raw = call_llm(system=DEBATE_PROMPT, user=user_message)
+    raw = call_llm(system=DEBATE_PROMPT, user=user_message, max_tokens=2000)
     return _safe_json(raw, fallback={"exchanges": [], "unresolved_conflicts": []})
 
 
@@ -235,7 +249,7 @@ def run_final_decision(profile: dict, opinions: dict, debate: dict) -> dict:
         f"{json.dumps(debate, indent=2)}\n\n"
         "Produce the final decision now, following all rules exactly."
     )
-    raw = call_llm(system=FINAL_DECISION_PROMPT, user=user_message)
+    raw = call_llm(system=FINAL_DECISION_PROMPT, user=user_message, max_tokens=2000)
     return _safe_json(raw, fallback={
         "recommendation": "Undetermined", "confidence": 0, "reasoning": "",
         "strengths": [], "concerns": [], "unresolved_disagreements": []
